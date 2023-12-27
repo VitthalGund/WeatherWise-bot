@@ -6,22 +6,13 @@ export type AdminDocument = Admin & Document;
 @Schema()
 export class Admin {
   @Prop({ type: 'number' })
-  username: {
-    type: string;
-    required: true;
-  };
+  username: string;
 
   @Prop({ type: 'string' })
-  email: {
-    type: string;
-    required: true;
-  };
+  email: string;
 
-  @Prop({ type: 'Boolean' })
-  password: {
-    type: string;
-    required: true;
-  };
+  @Prop({ type: 'string' })
+  password: string;
 
   roles: {
     Admin: {

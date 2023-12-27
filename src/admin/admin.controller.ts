@@ -10,8 +10,9 @@ export class AdminController {
   async login(
     @Body('email') email: string,
     @Body('password') password: string,
+    @Res() res: Response,
   ) {
-    return this.adminService.login(email, password);
+    return this.adminService.login(res, email, password);
   }
   @Post('login/google')
   async google(@Res() res: Response, @Body('email') googleAccessToken: string) {

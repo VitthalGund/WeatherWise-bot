@@ -5,16 +5,74 @@ import { Admin } from 'src/schemas/Admin';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
 import { Response } from 'express';
+import bcryptjs from 'bcryptjs';
 
 @Injectable()
 export class AdminService {
   constructor(@InjectModel(Admin.name) private userModel: Model<Admin>) {}
 
-  async login(email: string, password: string) {
-    // Here you should implement the logic for admin login
-    // You might want to use Passport.js with the Google strategy
-    // This is a placeholder and should be replaced with your actual logic
-    console.log(`Logging in as ${{ email, password }}`);
+  async login(@Res() res: Response, email: string, password: string) {
+    try {
+      if (!password || !email)
+        return res.status(400).json({ message: 'insufficient parameters.' });
+      // console.log(req.body)
+      const foundUser = await this.userModel.findOne({ email: email });
+      if (!foundUser) return res.sendStatus(401); //Unauthorized
+      // check password with hash to evaluate password is correct or not
+      const match = bcryptjs.compareSync(password, foundUser.password);
+      // if password and email is correct then:
+      if (match && foundUser.email === email) {
+        const roles = Object.values(foundUser.roles).filter(Boolean);
+        // 1. create JWTs
+        const authToken = jwt.sign(
+          {
+            UserInfo: {
+              username: foundUser.username,
+              email: email,
+              roles: roles,
+            },
+          },
+          process.env.ACCESS_TOKEN_SECRET,
+          { expiresIn: '10h' },
+        );
+        // 2.create new refresh Token
+        const refreshToken = jwt.sign(
+          {
+            username: foundUser.username,
+            email: foundUser.email,
+            roles: roles,
+          },
+          process.env.REFRESH_TOKEN_SECRET,
+          { expiresIn: '1d' },
+        );
+        // 3.Saving refreshToken with current username
+        foundUser.refreshToken = refreshToken;
+        // const result = await foundUser.save();
+        await foundUser.save();
+        // console.log(result);
+
+        // 4.Creates Secure Cookie with refresh token
+        // res.setHeader("Set-Cookie", `jwt=${refreshToken}; httpOnly=true; secure=true; sameSite=None; maxAge=${24 * 60 * 60 * 1000};`)
+        res.cookie('jwt', refreshToken, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'none',
+          maxAge: 24 * 60 * 60 * 1000,
+        });
+        // Send authorization roles and access token to username
+        res.json({
+          roles,
+          authToken,
+          refreshToken,
+          success: true,
+          username: foundUser.username,
+        });
+      } else {
+        res.sendStatus(401);
+      }
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
   }
   async google(@Res() res: Response, googleAccessToken: string) {
     try {
