@@ -36,6 +36,7 @@ export class WeatherServices {
           this.subscribeUser(
             msg.chat.id.toString().toLowerCase(),
             msg.text.split(':')[1].trim().toLowerCase(),
+            msg.from.first_name,
           );
         });
       }
@@ -98,7 +99,7 @@ export class WeatherServices {
     this.bot.sendMessage(chatId, 'Welcome to WeatherWise Bot');
   }
 
-  async subscribeUser(chatId: string, locationName?: string) {
+  async subscribeUser(chatId: string, locationName: string, username: string) {
     const data = await this.fetchWeatherDataForLocation(locationName);
     this.logger.debug(data);
     console.log(data);
@@ -116,6 +117,7 @@ export class WeatherServices {
       {
         $set: {
           chatId,
+          username,
           locationName,
         },
       },

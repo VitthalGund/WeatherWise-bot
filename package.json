@@ -2,8 +2,8 @@
   "name": "whether-telegram-bot",
   "version": "0.0.1",
   "description": "",
-  "author": "",
   "private": true,
+  "author": "vitthal gund",
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",

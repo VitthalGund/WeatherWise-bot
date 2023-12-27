@@ -9,6 +9,9 @@ export class User {
   chatId: string;
 
   @Prop({ type: 'string' })
+  username: string;
+
+  @Prop({ type: 'string' })
   locationName?: string;
 
   @Prop({ type: 'Boolean' })
