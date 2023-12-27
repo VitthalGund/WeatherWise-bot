@@ -7,6 +7,7 @@ import axios from 'axios';
 import mongoose from 'mongoose';
 import { Message } from 'node-telegram-bot-api';
 import { User } from 'src/Model/userSchema';
+import { Cron } from '@nestjs/schedule';
 
 @Injectable()
 export class WeatherServices {
@@ -24,9 +25,6 @@ export class WeatherServices {
       if (msg.text === '/subscribe') {
         this.subscribe(msg);
       }
-    });
-
-    this.bot.on('message', (msg: Message) => {
       // const pattern = /^\/[\w\s'.-]+$/i;
       // this.logger.debug(pattern.test(msg.text));
       this.logger.debug('done');
@@ -36,9 +34,20 @@ export class WeatherServices {
           [0, 0],
           msg.text.slice(1, msg.text.length),
         );
-        this.bot.sendMessage(
-          msg.chat.id,
-          'You have been subscribed to daily weather updates!',
+      }
+      this.logger.debug(
+        msg.location &&
+          msg.reply_to_message.text === 'Please share your location.',
+      );
+      if (
+        msg.location &&
+        msg.reply_to_message.text === 'Please share your location.'
+      ) {
+        this.bot.on('message', (msg: Message) =>
+          this.subscribeUser(msg.chat.id.toString(), [
+            msg.location.latitude,
+            msg.location.latitude,
+          ]),
         );
       }
     });
@@ -90,6 +99,7 @@ export class WeatherServices {
     locationName?: string,
   ) {
     const duplicate = await this.userModel.find({ chatId });
+    this.logger.debug(duplicate);
     if (duplicate) {
       this.bot.sendMessage(
         chatId,
@@ -106,6 +116,7 @@ export class WeatherServices {
     await user.save();
   }
 
+  @Cron('0 7 * * *')
   async sendUpdates() {
     // Fetch weather data for each subscriber and send them a message.
     const users = await this.userModel.find();

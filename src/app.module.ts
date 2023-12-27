@@ -7,6 +7,7 @@ import { ConfigModule } from '@nestjs/config';
 import { WeatherServices } from './weather/weather.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from './Model/userSchema';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { User, UserSchema } from './Model/userSchema';
     ConfigModule.forRoot({ envFilePath: '.env.local' }),
     MongooseModule.forRoot('mongodb://127.0.0.1:27017/Bot'),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [WeatherServices, AppService],
