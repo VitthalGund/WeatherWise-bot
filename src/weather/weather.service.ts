@@ -19,12 +19,30 @@ export class WeatherServices {
     });
     this.bot.on('message', (msg: Message) => {
       this.logger.debug(msg);
-      if (msg.text === '/start') {
+      if (msg.text.toLowerCase() === '/start') {
         this.start(msg.chat.id);
       }
-      if (msg.text === '/subscribe') {
+
+      if (msg.text.toLowerCase() === '/subscribe') {
         this.subscribe(msg);
       }
+
+      if (msg.text.toLowerCase().startsWith('location:')) {
+        this.subscribeUser(
+          msg.chat.id.toString().toLowerCase(),
+          msg.text.split(':')[1].trim().toLowerCase(),
+        );
+      }
+
+      if (msg.text.toLowerCase().startsWith('updates')) {
+        userModel
+          .findOne({ chatId: msg.chat.id }, { locationName: 1 })
+          .then((value) => {
+            this.logger.error(value);
+          })
+          .catch(this.logger.debug);
+      }
+
       // const pattern = /^\/[\w\s'.-]+$/i;
       // this.logger.debug(pattern.test(msg.text));
     });
@@ -32,19 +50,20 @@ export class WeatherServices {
 
   async subscribe(msg: Message) {
     const chatId = msg.chat.id;
+    const duplicate = await this.userModel.findOne({ chatId });
+
+    if (duplicate) {
+      this.bot.sendMessage(
+        chatId,
+        'You are already subscribed, You will received weather at 7AM daily!',
+      );
+      return;
+    }
+
     this.bot.sendMessage(
       chatId,
       'Enter the name of your location.(eg: location:Mumbai)',
     );
-    this.bot.on('message', async (msg: Message) => {
-      this.logger.debug('done');
-      if (msg.text.startsWith('location:')) {
-        this.subscribeUser(
-          msg.chat.id.toString().toLowerCase(),
-          msg.text.split(':')[1].trim(),
-        );
-      }
-    });
   }
 
   // async registerUser(msg: Message) {
@@ -72,17 +91,9 @@ export class WeatherServices {
   }
 
   async subscribeUser(chatId: string, locationName?: string) {
-    const duplicate = await this.userModel.find({ chatId });
-    this.logger.debug(duplicate);
-    if (duplicate) {
-      this.bot.sendMessage(
-        chatId,
-        'You are already subscribed, You will received weather at 7AM daily!',
-      );
-      return;
-    }
-
     const data = await this.fetchWeatherDataForLocation(locationName);
+    this.logger.debug(data);
+    console.log(data);
     if (data === 'No response') {
       this.bot.sendMessage('Invalid location!');
       return;
@@ -114,6 +125,9 @@ export class WeatherServices {
       const response = await axios.get(
         `http://api.openweathermap.org/data/2.5/weather?q=${locationName}&appid=${process.env.openWeatherAPIKey}`,
       );
+      if (response.data.message === 'city not found') {
+        return 'No response';
+      }
       return response.data;
     } catch (error) {
       return 'No response';
