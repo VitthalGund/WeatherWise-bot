@@ -13,6 +13,7 @@ import { Cron } from '@nestjs/schedule';
 export class WeatherServices {
   private bot: any;
   private logger = new Logger(WeatherServices.name);
+
   constructor(@InjectModel(User.name) private userModel: mongoose.Model<User>) {
     this.bot = new TelegramBot(process.env.TelgramBotApiKey, {
       polling: true,
@@ -24,21 +25,42 @@ export class WeatherServices {
       }
 
       if (msg.text.toLowerCase() === '/subscribe') {
-        this.subscribe(msg);
+        this.subscribed(msg, true);
       }
 
       if (msg.text.toLowerCase().startsWith('location:')) {
-        this.subscribeUser(
-          msg.chat.id.toString().toLowerCase(),
-          msg.text.split(':')[1].trim().toLowerCase(),
-        );
+        this.subscribed(msg, false).then((status) => {
+          if (status === 'No response' || status === 'blocked') {
+            return;
+          }
+          this.subscribeUser(
+            msg.chat.id.toString().toLowerCase(),
+            msg.text.split(':')[1].trim().toLowerCase(),
+          );
+        });
       }
 
       if (msg.text.toLowerCase().startsWith('updates')) {
         userModel
           .findOne({ chatId: msg.chat.id }, { locationName: 1 })
           .then((value) => {
-            this.logger.error(value);
+            if (value === null) {
+              this.bot.sendMessage(
+                msg.chat.id,
+                'Your not subscribed to service yet',
+              );
+              this.bot.sendMessage(
+                msg.chat.id,
+                'send /subscribe to receive daily weather updates!',
+              );
+              return;
+            }
+            this.fetchWeatherDataForLocation(value.locationName).then(
+              (value) => {
+                const messgae = this.generateMessage(value);
+                this.bot.sendMessage(msg.chat.id, messgae);
+              },
+            );
           })
           .catch(this.logger.debug);
       }
@@ -48,43 +70,29 @@ export class WeatherServices {
     });
   }
 
-  async subscribe(msg: Message) {
+  async subscribed(msg: Message, newUser: boolean) {
     const chatId = msg.chat.id;
-    const duplicate = await this.userModel.findOne({ chatId });
 
-    if (duplicate) {
+    const duplicate = await this.userModel.findOne({ chatId });
+    if (duplicate.blocked) {
+      this.bot.sendMessage(chatId, 'No service available!');
+      return 'blocked';
+    }
+    if (newUser) {
+      if (duplicate) {
+        this.bot.sendMessage(
+          chatId,
+          'You are already subscribed, You will received weather at 7AM daily!',
+        );
+        return 'No response';
+      }
+
       this.bot.sendMessage(
         chatId,
-        'You are already subscribed, You will received weather at 7AM daily!',
+        'Enter the name of your location.(eg: location:Mumbai)',
       );
-      return;
     }
-
-    this.bot.sendMessage(
-      chatId,
-      'Enter the name of your location.(eg: location:Mumbai)',
-    );
   }
-
-  // async registerUser(msg: Message) {
-  //   const chatId = Number(msg.chat.id).toString();
-  //   if (!msg.location) {
-  //     this.bot.sendMessage(
-  //       chatId,
-  //       "We don't able to access your location, but still you can get weather updates by city:cityname (eg. city:Mumbai)",
-  //     );
-  //     return;
-  //   }
-  //   const location: [number, number] = [
-  //     msg.location.longitude,
-  //     msg.location.latitude,
-  //   ];
-  //   await this.subscribeUser(chatId, location);
-  //   this.bot.sendMessage(
-  //     chatId,
-  //     'You have been subscribed to daily weather updates!',
-  //   );
-  // }
 
   start(chatId: number) {
     this.bot.sendMessage(chatId, 'Welcome to WeatherWise Bot');
@@ -101,17 +109,47 @@ export class WeatherServices {
 
     this.bot.sendMessage(chatId, this.generateMessage(data));
     // Store the chatId and location in MongoDB
-    const user = new this.userModel({
-      chatId,
-      locationName,
-    });
-    await user.save();
+    const user = await this.userModel.updateOne(
+      {
+        chatId,
+      },
+      {
+        $set: {
+          chatId,
+          locationName,
+        },
+      },
+      {
+        upsert: true,
+      },
+    );
+    if (user.upsertedCount == 1) {
+      this.bot.sendMessage(
+        chatId,
+        'Congratulations, You will received weather at 7AM daily!',
+      );
+      this.bot.sendMessage(chatId, 'Thanks for choosing WeatherWise!');
+    }
+    if (user.modifiedCount == 1) {
+      this.bot.sendMessage(
+        chatId,
+        'Your location is updated to ' + locationName,
+      );
+      this.bot.sendMessage(
+        chatId,
+        'You will received weather at 7AM daily for !' + locationName,
+      );
+      this.bot.sendMessage(
+        chatId,
+        'Your can change your location any time (no warries)!',
+      );
+    }
   }
 
   @Cron('0 7 * * *')
   async sendUpdates() {
     // Fetch weather data for each subscriber and send them a message.
-    const users = await this.userModel.find();
+    const users = await this.userModel.find({ blocked: false });
 
     for (const user of users) {
       const data = await this.fetchWeatherDataForLocation(user.locationName);

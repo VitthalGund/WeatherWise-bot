@@ -10,6 +10,12 @@ export class User {
 
   @Prop({ type: 'string' })
   locationName?: string;
+
+  @Prop({ type: 'Boolean' })
+  blocked: {
+    type: boolean;
+    default: false;
+  };
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
