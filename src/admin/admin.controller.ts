@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Delete,
-  Body,
-  Param,
-  Res,
-} from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Res } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { Response } from 'express';
 
@@ -31,8 +23,8 @@ export class AdminController {
     return this.adminService.getUsers();
   }
 
-  @Delete('user/:id')
-  async deleteUser(@Param('id') id: string) {
+  @Delete('user')
+  async deleteUser(@Body('id') id: string) {
     return this.adminService.deleteUser(id);
   }
 
@@ -41,8 +33,8 @@ export class AdminController {
     return this.adminService.deleteUsers(ids);
   }
 
-  @Post('blockUser/:id')
-  async blockUser(@Param('id') id: string) {
+  @Post('blockUser')
+  async blockUser(@Body('id') id: string) {
     return this.adminService.blockUser(id);
   }
 
