@@ -27,77 +27,51 @@ export class WeatherServices {
       }
       // const pattern = /^\/[\w\s'.-]+$/i;
       // this.logger.debug(pattern.test(msg.text));
-      this.logger.debug('done');
-      if (msg.text.startsWith('city:')) {
-        this.subscribeUser(
-          msg.chat.id.toString().toLowerCase(),
-          [0, 0],
-          msg.text.slice(1, msg.text.length),
-        );
-      }
-      this.logger.debug(
-        msg.location &&
-          msg.reply_to_message.text === 'Please share your location.',
-      );
-      if (
-        msg.location &&
-        msg.reply_to_message.text === 'Please share your location.'
-      ) {
-        this.bot.on('message', (msg: Message) =>
-          this.subscribeUser(msg.chat.id.toString(), [
-            msg.location.latitude,
-            msg.location.latitude,
-          ]),
-        );
-      }
     });
   }
 
   async subscribe(msg: Message) {
     const chatId = msg.chat.id;
-    this.bot.sendMessage(chatId, 'Please share your location.', {
-      parse_mode: 'Markdown',
-      reply_markup: {
-        keyboard: [[{ text: 'Share location', request_location: true }]],
-        one_time_keyboard: true,
-      },
-    });
+    this.bot.sendMessage(
+      chatId,
+      'Enter the name of your location.(eg: location:Mumbai)',
+    );
     this.bot.on('message', async (msg: Message) => {
-      if (msg.text === 'Share location') {
-        await this.registerUser(msg);
+      this.logger.debug('done');
+      if (msg.text.startsWith('location:')) {
+        this.subscribeUser(
+          msg.chat.id.toString().toLowerCase(),
+          msg.text.split(':')[1].trim(),
+        );
       }
     });
   }
 
-  async registerUser(msg: Message) {
-    const chatId = Number(msg.chat.id).toString();
-    if (!msg.location) {
-      this.bot.sendMessage(
-        chatId,
-        "We don't able to access your location, but still you can get weather updates by city:cityname (eg. city:Mumbai)",
-      );
-      return;
-    }
-    const location: [number, number] = [
-      msg.location.longitude,
-      msg.location.latitude,
-    ];
-    await this.subscribeUser(chatId, location);
-    this.bot.sendMessage(
-      chatId,
-      'You have been subscribed to daily weather updates!',
-    );
-  }
+  // async registerUser(msg: Message) {
+  //   const chatId = Number(msg.chat.id).toString();
+  //   if (!msg.location) {
+  //     this.bot.sendMessage(
+  //       chatId,
+  //       "We don't able to access your location, but still you can get weather updates by city:cityname (eg. city:Mumbai)",
+  //     );
+  //     return;
+  //   }
+  //   const location: [number, number] = [
+  //     msg.location.longitude,
+  //     msg.location.latitude,
+  //   ];
+  //   await this.subscribeUser(chatId, location);
+  //   this.bot.sendMessage(
+  //     chatId,
+  //     'You have been subscribed to daily weather updates!',
+  //   );
+  // }
 
   start(chatId: number) {
     this.bot.sendMessage(chatId, 'Welcome to WeatherWise Bot');
   }
 
-  async subscribeUser(
-    chatId: string,
-    coordinatesArr?: [number, number],
-    locationName?: string,
-  ) {
+  async subscribeUser(chatId: string, locationName?: string) {
     const duplicate = await this.userModel.find({ chatId });
     this.logger.debug(duplicate);
     if (duplicate) {
@@ -107,10 +81,17 @@ export class WeatherServices {
       );
       return;
     }
+
+    const data = await this.fetchWeatherDataForLocation(locationName);
+    if (data === 'No response') {
+      this.bot.sendMessage('Invalid location!');
+      return;
+    }
+
+    this.bot.sendMessage(chatId, this.generateMessage(data));
     // Store the chatId and location in MongoDB
     const user = new this.userModel({
       chatId,
-      location: { type: 'Point', coordinates: coordinatesArr },
       locationName,
     });
     await user.save();
@@ -122,48 +103,45 @@ export class WeatherServices {
     const users = await this.userModel.find();
 
     for (const user of users) {
-      if (user.locationName) {
-        const data = await this.fetchWeatherDataForLocation(user.locationName);
-        const weather = data.weather[0].description;
-        const temperature = data.main.temp - 273.15;
-        const city = data.name;
-        const humidity = data.main.humidity;
-        const pressure = data.main.pressure;
-        const windSpeed = data.wind.speed;
-        const message = `The weather in ${city} is ${weather} with a temperature of ${temperature.toFixed(
-          2,
-        )}°C. The humidity is ${humidity}%, the pressure is ${pressure}hPa, and the wind speed is ${windSpeed}m/s.`;
-
-        this.bot.sendMessage(user.chatId, message);
-      } else {
-        const data = await this.fetchWeatherData(user.location.coordinates);
-        const weather = data.weather[0].description;
-        const temperature = data.main.temp - 273.15;
-        const city = data.name;
-        const humidity = data.main.humidity;
-        const pressure = data.main.pressure;
-        const windSpeed = data.wind.speed;
-        const message = `The weather in ${city} is ${weather} with a temperature of ${temperature.toFixed(
-          2,
-        )}°C. The humidity is ${humidity}%, the pressure is ${pressure}hPa, and the wind speed is ${windSpeed}m/s.`;
-
-        this.bot.sendMessage(user.chatId, message);
-      }
+      const data = await this.fetchWeatherDataForLocation(user.locationName);
+      const message = this.generateMessage(data);
+      this.bot.sendMessage(user.chatId, message);
     }
   }
   private async fetchWeatherDataForLocation(locationName: string) {
     // implement the code to handle location name
-    const response = await axios.get(
-      `http://api.openweathermap.org/data/2.5/weather?q=${locationName}&appid=${process.env.openWeatherAPIKey}`,
-    );
-    return response.data;
+    try {
+      const response = await axios.get(
+        `http://api.openweathermap.org/data/2.5/weather?q=${locationName}&appid=${process.env.openWeatherAPIKey}`,
+      );
+      return response.data;
+    } catch (error) {
+      return 'No response';
+    }
   }
   private async fetchWeatherData([longitude, latitude]: [number, number]) {
     // Fetch weather data from the OpenWeather API.
     // Replace 'YOUR_OPENWEATHER_API_KEY' with your actual API key.
-    const response = await axios.get(
-      `http://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${process.env.openWeatherAPIKey}`,
-    );
-    return response.data;
+    try {
+      const response = await axios.get(
+        `http://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${process.env.openWeatherAPIKey}`,
+      );
+      return response.data;
+    } catch (error) {
+      return 'No response';
+    }
+  }
+
+  generateMessage(data: any) {
+    const weather = data.weather[0].description;
+    const temperature = data.main.temp - 273.15;
+    const city = data.name;
+    const humidity = data.main.humidity;
+    const pressure = data.main.pressure;
+    const windSpeed = data.wind.speed;
+    const message = `The weather in ${city} is ${weather} with a temperature of ${temperature.toFixed(
+      2,
+    )}°C. The humidity is ${humidity}%, the pressure is ${pressure}hPa, and the wind speed is ${windSpeed}m/s.`;
+    return message;
   }
 }

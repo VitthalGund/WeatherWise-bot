@@ -8,11 +8,7 @@ export class User {
   @Prop({ type: 'number' })
   chatId: string;
 
-  @Prop({ type: 'Object' })
-  location?: {
-    type: string;
-    coordinates: [number, number];
-  };
+  @Prop({ type: 'string' })
   locationName?: string;
 }
 
