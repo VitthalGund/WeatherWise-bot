@@ -11,6 +11,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AdminController } from './admin/admin.controller';
 import { AdminModule } from './admin/admin.module';
 import { AdminService } from './admin/admin.service';
+import { Admin, AdminSchema } from './schemas/Admin';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { AdminService } from './admin/admin.service';
     ConfigModule.forRoot({ envFilePath: '.env.local' }),
     MongooseModule.forRoot(process.env.DATABASE_URI),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    MongooseModule.forFeature([{ name: Admin.name, schema: AdminSchema }]),
     ScheduleModule.forRoot(),
     AdminModule,
     AdminModule,
