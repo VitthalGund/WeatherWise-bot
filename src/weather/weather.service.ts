@@ -6,7 +6,7 @@ const TelegramBot = require('node-telegram-bot-api');
 import axios from 'axios';
 import mongoose from 'mongoose';
 import { Message } from 'node-telegram-bot-api';
-import { User } from 'src/Model/userSchema';
+import { User } from 'src/schemas/userSchema';
 import { Cron } from '@nestjs/schedule';
 
 @Injectable()
@@ -74,7 +74,7 @@ export class WeatherServices {
     const chatId = msg.chat.id;
 
     const duplicate = await this.userModel.findOne({ chatId });
-    if (duplicate.blocked) {
+    if (duplicate?.blocked) {
       this.bot.sendMessage(chatId, 'No service available!');
       return 'blocked';
     }

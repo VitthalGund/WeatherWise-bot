@@ -2,7 +2,7 @@ import { Controller, Module } from '@nestjs/common';
 import { WeatherServices } from './weather.service';
 // import { Message } from 'node-telegram-bot-api';
 import { MongooseModule } from '@nestjs/mongoose';
-import { User, UserSchema } from 'src/Model/userSchema';
+import { User, UserSchema } from 'src/schemas/userSchema';
 
 @Controller('bot')
 @Module({

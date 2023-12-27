@@ -6,18 +6,23 @@ import { WeatherModule } from './weather/weather.module';
 import { ConfigModule } from '@nestjs/config';
 import { WeatherServices } from './weather/weather.service';
 import { MongooseModule } from '@nestjs/mongoose';
-import { User, UserSchema } from './Model/userSchema';
+import { User, UserSchema } from './schemas/userSchema';
 import { ScheduleModule } from '@nestjs/schedule';
+import { AdminController } from './admin/admin.controller';
+import { AdminModule } from './admin/admin.module';
+import { AdminService } from './admin/admin.service';
 
 @Module({
   imports: [
     WeatherModule,
     ConfigModule.forRoot({ envFilePath: '.env.local' }),
-    MongooseModule.forRoot('mongodb://127.0.0.1:27017/Bot'),
+    MongooseModule.forRoot(process.env.DATABASE_URI),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     ScheduleModule.forRoot(),
+    AdminModule,
+    AdminModule,
   ],
-  controllers: [AppController],
-  providers: [WeatherServices, AppService],
+  controllers: [AppController, AdminController],
+  providers: [WeatherServices, AppService, AdminService],
 })
 export class AppModule {}
