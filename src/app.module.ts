@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 // import { WeatherController } from './weather/weather.controller';
@@ -12,6 +12,8 @@ import { AdminController } from './admin/admin.controller';
 import { AdminModule } from './admin/admin.module';
 import { AdminService } from './admin/admin.service';
 import { Admin, AdminSchema } from './schemas/Admin';
+import { AdminMiddleware } from './admin/middleware/admin.middleware';
+import { JwtService } from '@nestjs/jwt';
 
 @Module({
   imports: [
@@ -22,13 +24,18 @@ import { Admin, AdminSchema } from './schemas/Admin';
     MongooseModule.forFeature([{ name: Admin.name, schema: AdminSchema }]),
     ScheduleModule.forRoot(),
     AdminModule,
-    AdminModule,
   ],
   controllers: [AppController, AdminController],
   providers: [
     // WeatherServices,
     AppService,
     AdminService,
+    JwtService,
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(AdminMiddleware).forRoutes('admin/login');
+    consumer.apply(AdminMiddleware).forRoutes('admin/login/google');
+  }
+}
