@@ -1,6 +1,7 @@
 import { Injectable, Res } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { User } from 'src/schemas/userSchema';
 import { Admin } from 'src/schemas/Admin';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
@@ -9,14 +10,17 @@ import bcryptjs from 'bcryptjs';
 
 @Injectable()
 export class AdminService {
-  constructor(@InjectModel(Admin.name) private userModel: Model<Admin>) {}
+  constructor(
+    @InjectModel(User.name) private userModel: Model<User>,
+    @InjectModel(Admin.name) private adminModel: Model<Admin>,
+  ) {}
 
   async login(@Res() res: Response, email: string, password: string) {
     try {
       if (!password || !email)
         return res.status(400).json({ message: 'insufficient parameters.' });
       // console.log(req.body)
-      const foundUser = await this.userModel.findOne({ email: email });
+      const foundUser = await this.adminModel.findOne({ email: email });
       if (!foundUser) return res.sendStatus(401); //Unauthorized
       // check password with hash to evaluate password is correct or not
       const match = bcryptjs.compareSync(password, foundUser.password);
@@ -95,7 +99,7 @@ export class AdminService {
           const email = response.data.email;
           // const picture = response.data.picture;
 
-          const existingUser = await this.userModel.findOne({ email });
+          const existingUser = await this.adminModel.findOne({ email });
 
           //   if (!existingUser) {
           //     const result = await this.userModel.create({
