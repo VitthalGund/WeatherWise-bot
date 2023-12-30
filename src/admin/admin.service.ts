@@ -197,19 +197,24 @@ export class AdminService {
       Logger.debug(resp);
 
       if (!resp) {
-        return res.status(400).json({ message: 'Invalid user id' });
+        return res
+          .status(400)
+          .json({ message: 'Invalid user id', success: false });
       }
       if (resp.deletedCount == 0) {
-        return res.status(400).json({ message: 'user not found' });
+        return res
+          .status(400)
+          .json({ message: 'user not found', success: false });
       }
 
       if (resp.deletedCount == 1) {
-        return res
-          .status(200)
-          .json({ message: 'User account deleted successfully' });
+        return res.status(200).json({
+          message: 'User account deleted successfully',
+          success: true,
+        });
       }
     } catch (error) {
-      return res.status(500).json({ message: error });
+      return res.status(500).json({ message: error, success: false });
     }
   }
 
@@ -229,21 +234,27 @@ export class AdminService {
       );
 
       if (!resp) {
-        return res.status(400).json({ message: 'Invalid user id' });
+        return res
+          .status(400)
+          .json({ message: 'Invalid user id', success: false });
       }
       if (resp.matchedCount == 0) {
-        return res.status(400).json({ message: 'user not found' });
+        return res
+          .status(400)
+          .json({ message: 'user not found', success: false });
       }
       if (resp.matchedCount == 1 && resp.modifiedCount == 0) {
-        return res.status(200).json({ message: 'user is already blocked' });
+        return res
+          .status(200)
+          .json({ message: 'user is already blocked', success: false });
       }
       if (resp.matchedCount == 1 && resp.modifiedCount == 1) {
         return res
           .status(200)
-          .json({ message: 'user is blocked successfully' });
+          .json({ message: 'user is blocked successfully', success: true });
       }
     } catch (error) {
-      return res.status(500).json({ message: error });
+      return res.status(500).json({ message: error, success: false });
     }
   }
   async unblockUser(@Res() res: Response, chatId: string) {
@@ -257,21 +268,27 @@ export class AdminService {
       );
 
       if (!resp) {
-        return res.status(400).json({ message: 'Invalid user id' });
+        return res
+          .status(400)
+          .json({ message: 'Invalid user id', success: false });
       }
       if (resp.matchedCount == 0) {
-        return res.status(400).json({ message: 'user not found' });
+        return res
+          .status(400)
+          .json({ message: 'user not found', success: false });
       }
       if (resp.matchedCount == 1 && resp.modifiedCount == 0) {
-        return res.status(200).json({ message: 'user is already unblocked' });
+        return res
+          .status(200)
+          .json({ message: 'user is already unblocked', success: false });
       }
       if (resp.matchedCount == 1 && resp.modifiedCount == 1) {
         return res
           .status(200)
-          .json({ message: 'user is unblocked successfully' });
+          .json({ message: 'user is unblocked successfully', success: true });
       }
     } catch (error) {
-      return res.status(500).json({ message: error });
+      return res.status(500).json({ message: error, success: false });
     }
   }
 
@@ -284,21 +301,27 @@ export class AdminService {
       );
 
       if (!resp) {
-        return res.status(400).json({ message: 'Invalid user id' });
+        return res
+          .status(400)
+          .json({ message: 'Invalid user id', success: false });
       }
 
       if (
         resp.matchedCount == chatIds.length &&
         resp.modifiedCount == chatIds.length
       ) {
-        res
-          .status(200)
-          .json({ message: 'all the given users are blocked successfully!' });
+        res.status(200).json({
+          message: 'all the given users are blocked successfully!',
+          success: true,
+        });
       } else {
-        res.status(200).json({ message: 'All the users may not be blocked!' });
+        res.status(200).json({
+          message: 'All the users may not be blocked!',
+          success: false,
+        });
       }
     } catch (error) {
-      return res.status(500).json({ message: error });
+      return res.status(500).json({ message: error, success: false });
     }
   }
 }
