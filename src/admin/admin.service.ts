@@ -1,18 +1,19 @@
-import { Injectable, Logger, Res } from '@nestjs/common';
+import { Injectable, Res } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User } from 'src/schemas/userSchema';
 import { Admin } from 'src/schemas/Admin';
-import jwt from 'jsonwebtoken';
 import axios from 'axios';
 import { Response } from 'express';
 import { compare, hash } from 'bcryptjs';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AdminService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(Admin.name) private adminModel: Model<Admin>,
+    private jwtService: JwtService,
   ) {}
 
   async login(@Res() res: Response, email: string, password: string) {
@@ -27,9 +28,8 @@ export class AdminService {
       // if password and email is correct then:
       if (match && foundUser.email === email) {
         const roles = 5150;
-        Logger.debug(match);
         // 1. create JWTs
-        const authToken = jwt.sign(
+        const authToken = await this.jwtService.signAsync(
           {
             UserInfo: {
               username: foundUser.username,
@@ -37,18 +37,16 @@ export class AdminService {
               roles: roles,
             },
           },
-          process.env.ACCESS_TOKEN_SECRET,
-          { expiresIn: '10h' },
+          { secret: process.env.ACCESS_TOKEN_SECRET, expiresIn: '10h' },
         );
         // 2.create new refresh Token
-        const refreshToken = jwt.sign(
+        const refreshToken = await this.jwtService.signAsync(
           {
             username: foundUser.username,
             email: foundUser.email,
             roles: roles,
           },
-          process.env.REFRESH_TOKEN_SECRET,
-          { expiresIn: '1d' },
+          { secret: process.env.ACCESS_TOKEN_SECRET, expiresIn: '10h' },
         );
         // 3.Saving refreshToken with current username
         foundUser.refreshToken = refreshToken;
@@ -112,7 +110,7 @@ export class AdminService {
           //     existingUser = result;
           //   }
           const roles = Object.values(existingUser.roles).filter(Boolean);
-          const authToken = jwt.sign(
+          const authToken = await this.jwtService.signAsync(
             {
               UserInfo: {
                 username: firstName + lastName,
@@ -120,17 +118,15 @@ export class AdminService {
                 roles: roles,
               },
             },
-            process.env.ACCESS_TOKEN_SECRET,
-            { expiresIn: '10h' },
+            { secret: process.env.ACCESS_TOKEN_SECRET, expiresIn: '10h' },
           );
-          const refreshToken = jwt.sign(
+          const refreshToken = await this.jwtService.signAsync(
             {
               username: firstName + lastName,
               email: existingUser.email,
               roles: roles,
             },
-            process.env.REFRESH_TOKEN_SECRET!,
-            { expiresIn: '24h' },
+            { secret: process.env.ACCESS_TOKEN_SECRET, expiresIn: '10h' },
           );
 
           res.cookie('jwt', refreshToken, {
