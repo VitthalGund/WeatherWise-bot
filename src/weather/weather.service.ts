@@ -16,7 +16,9 @@ export class WeatherServices {
 
   constructor(@InjectModel(User.name) private userModel: mongoose.Model<User>) {
     this.bot = new TelegramBot(process.env.TelgramBotApiKey, {
-      polling: true,
+      webHook: {
+        port: process.env.PORT || 3000,
+      },
     });
     this.bot.on('message', (msg: Message) => {
       this.logger.debug(msg);
