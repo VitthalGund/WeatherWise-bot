@@ -83,4 +83,12 @@ export class AdminController {
 
     return this.adminService.blockUsers(res, chatIds);
   }
+  @Post('updateAPI')
+  async updateAPI(
+    @Res() res: Response,
+    @Body('key') key: string,
+    @Body('key') email: string,
+  ) {
+    return this.adminService.API(res, key, email);
+  }
 }

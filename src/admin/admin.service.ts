@@ -16,6 +16,39 @@ export class AdminService {
     private jwtService: JwtService,
   ) {}
 
+  async API(
+    res: Response<any, Record<string, any>>,
+    key: string,
+    email: string,
+  ) {
+    try {
+      const response = await axios.get(
+        `http://api.openweathermap.org/data/2.5/weather?q=mumbai&appid=${key}`,
+      );
+      if (response.data.message === 'city not found') {
+        return res.status(400).json({ message: 'Invalid api key' });
+      }
+      if (!response.data.weather[0].description) {
+        return res.status(400).json({ message: 'Invalid api key' });
+      }
+
+      const Admindata = await this.adminModel.updateOne(
+        { email },
+        {
+          apiKey: key,
+        },
+      );
+      if (Admindata.modifiedCount == 0) {
+        return res.status(400).json({ message: 'unable to update api key' });
+      }
+      if (Admindata.modifiedCount > 0) {
+        return res.status(200).json({ message: 'Api key updated' });
+      }
+    } catch (error) {
+      return res.status(500).json({ message: error });
+    }
+  }
+
   async login(@Res() res: Response, email: string, password: string) {
     try {
       if (!password || !email)

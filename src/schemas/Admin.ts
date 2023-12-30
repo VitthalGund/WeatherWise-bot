@@ -21,6 +21,7 @@ export class Admin {
     };
   };
   refreshToken: string;
+  apiKey: string;
 }
 
 export const AdminSchema = SchemaFactory.createForClass(Admin);
