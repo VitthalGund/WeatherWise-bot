@@ -1,4 +1,4 @@
-import { Injectable, Res } from '@nestjs/common';
+import { Injectable, Logger, Res } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User } from 'src/schemas/userSchema';
@@ -29,7 +29,7 @@ export class AdminService {
       if (match && foundUser.email === email) {
         const roles = 5150;
         // 1. create JWTs
-        const authToken = await this.jwtService.signAsync(
+        const accessToken = await this.jwtService.signAsync(
           {
             UserInfo: {
               username: foundUser.username,
@@ -65,7 +65,7 @@ export class AdminService {
         // Send authorization roles and access token to username
         res.json({
           roles,
-          authToken,
+          accessToken,
           refreshToken,
           success: true,
           username: foundUser.username,
@@ -110,7 +110,7 @@ export class AdminService {
           //     existingUser = result;
           //   }
           const roles = Object.values(existingUser.roles).filter(Boolean);
-          const authToken = await this.jwtService.signAsync(
+          const accessToken = await this.jwtService.signAsync(
             {
               UserInfo: {
                 username: firstName + lastName,
@@ -140,7 +140,7 @@ export class AdminService {
             username: existingUser.username,
             roles,
             success: true,
-            accessToken: authToken,
+            accessToken: accessToken,
           });
         })
         .catch((e) => {
@@ -187,9 +187,22 @@ export class AdminService {
     return await this.userModel.find({});
   }
 
-  async deleteUser(id: string) {
+  async deleteUser(@Res() res: Response, chatId: string) {
+    if (!chatId) {
+      res.status(400).json({ message: 'missing chatIds' });
+    }
+    try {
+      const resp = await this.userModel.findOneAndDelete(
+        { chatId: chatId },
+        { blocked: true },
+      );
+      Logger.debug(resp);
+    } catch (error) {
+      Logger.debug(error);
+    }
+
     // Delete a user from the database
-    return await this.userModel.findOneAndDelete({ chatId: id });
+    // return res.json(resp);
   }
 
   async deleteUsers(ids: string[]) {
@@ -197,19 +210,47 @@ export class AdminService {
     return await this.userModel.deleteMany({ chatId: { $in: ids } });
   }
 
-  async blockUser(id: string) {
+  async blockUser(@Res() res: Response, chatId: string) {
     // Block a user by setting the 'blocked' field to true
-    return await this.userModel.findByIdAndUpdate(
-      { chatId: id },
-      { blocked: true },
-    );
+    try {
+      const resp = await this.userModel.updateOne(
+        { chatId },
+        { $set: { blocked: true } },
+      );
+      if (!resp) {
+        return res.status(400).json({ message: 'Invalid user id' });
+      }
+      if (resp.matchedCount == 1 && resp.modifiedCount == 1) {
+        res.status(200).json({ message: 'user is blocked successfully' });
+      }
+    } catch (error) {
+      return res.status(500).json({ message: error });
+    }
   }
 
-  async blockUsers(ids: string[]) {
+  async blockUsers(@Res() res: Response, chatIds: string[]) {
     // Block multiple users by setting the 'blocked' field to true
-    return await this.userModel.updateMany(
-      { chatId: { $in: ids } },
-      { blocked: true },
-    );
+    try {
+      const resp = await this.userModel.updateMany(
+        { chatId: { $in: chatIds } },
+        { blocked: true },
+      );
+      if (!resp) {
+        return res.status(400).json({ message: 'Invalid user id' });
+      }
+
+      if (
+        resp.matchedCount == chatIds.length &&
+        resp.modifiedCount == chatIds.length
+      ) {
+        res
+          .status(200)
+          .json({ message: 'all the given users are blocked successfully!' });
+      } else {
+        res.status(200).json({ message: 'All the users may not be blocked!' });
+      }
+    } catch (error) {
+      return res.status(500).json({ message: error });
+    }
   }
 }

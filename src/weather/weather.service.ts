@@ -43,7 +43,7 @@ export class WeatherServices {
 
       if (msg.text.toLowerCase().startsWith('updates')) {
         userModel
-          .findOne({ chatId: msg.chat.id }, { locationName: 1 })
+          .findOne({ chatId: msg.chat.id.toString() }, { locationName: 1 })
           .then((value) => {
             if (value === null) {
               this.bot.sendMessage(
@@ -72,7 +72,7 @@ export class WeatherServices {
   }
 
   async subscribed(msg: Message, newUser: boolean) {
-    const chatId = msg.chat.id;
+    const chatId = msg.chat.id.toString();
 
     const duplicate = await this.userModel.findOne({ chatId });
     if (duplicate?.blocked) {

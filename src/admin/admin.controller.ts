@@ -33,22 +33,38 @@ export class AdminController {
   }
 
   @Delete('user')
-  async deleteUser(@Body('id') id: string) {
-    return this.adminService.deleteUser(id);
+  async deleteUser(@Res() res: Response, @Body('chatId') chatId: string) {
+    if (!chatId) {
+      return res.status(400).json({ message: 'missing chatId' });
+    }
+
+    return this.adminService.deleteUser(res, chatId);
   }
 
   @Delete('users')
-  async deleteUsers(@Body('ids') ids: string[]) {
-    return this.adminService.deleteUsers(ids);
+  async deleteUsers(@Res() res: Response, @Body('ids') chatIds: string[]) {
+    if (!chatIds) {
+      return res.status(400).json({ message: 'missing chatIds' });
+    }
+
+    return this.adminService.deleteUsers(chatIds);
   }
 
   @Post('blockUser')
-  async blockUser(@Body('id') id: string) {
-    return this.adminService.blockUser(id);
+  async blockUser(@Res() res: Response, @Body('chatId') chatId: string) {
+    if (!chatId) {
+      return res.status(400).json({ message: 'missing chatId' });
+    }
+
+    return this.adminService.blockUser(res, chatId);
   }
 
   @Post('blockUsers')
-  async blockUsers(@Body('ids') ids: string[]) {
-    return this.adminService.blockUsers(ids);
+  async blockUsers(@Res() res: Response, @Body('ids') chatIds: string[]) {
+    if (!chatIds) {
+      return res.status(400).json({ message: 'missing chatIds' });
+    }
+
+    return this.adminService.blockUsers(res, chatIds);
   }
 }
