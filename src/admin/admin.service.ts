@@ -22,6 +22,9 @@ export class AdminService {
     email: string,
   ) {
     try {
+      if (!email || key) {
+        return res.status(400).json({ message: 'missing key or email' });
+      }
       const response = await axios.get(
         `http://api.openweathermap.org/data/2.5/weather?q=mumbai&appid=${key}`,
       );
