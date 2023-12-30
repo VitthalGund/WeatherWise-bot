@@ -54,8 +54,6 @@ export class AdminService {
         await foundUser.save();
         // console.log(result);
 
-        // 4.Creates Secure Cookie with refresh token
-        // res.setHeader("Set-Cookie", `jwt=${refreshToken}; httpOnly=true; secure=true; sameSite=None; maxAge=${24 * 60 * 60 * 1000};`)
         res.cookie('jwt', refreshToken, {
           httpOnly: true,
           secure: true,
@@ -188,11 +186,35 @@ export class AdminService {
   }
 
   async deleteUser(@Res() res: Response, chatId: string) {
-    if (!chatId) {
-      res.status(400).json({ message: 'missing chatIds' });
-    }
     try {
       const resp = await this.userModel.deleteOne({ chatId: chatId });
+
+      if (!resp) {
+        return res
+          .status(400)
+          .json({ message: 'Invalid user id', success: false });
+      }
+      if (resp.deletedCount == 0) {
+        return res
+          .status(400)
+          .json({ message: 'user not found', success: false });
+      }
+
+      if (resp.deletedCount == 1) {
+        return res.status(200).json({
+          message: 'User account deleted successfully',
+          success: true,
+        });
+      }
+    } catch (error) {
+      return res.status(500).json({ message: error, success: false });
+    }
+  }
+
+  async deleteUsers(@Res() res: Response, ids: string[]) {
+    // Delete multiple users from the database
+    try {
+      const resp = await this.userModel.deleteMany({ chatId: { $in: ids } });
 
       Logger.debug(resp);
 
@@ -218,20 +240,14 @@ export class AdminService {
     }
   }
 
-  async deleteUsers(ids: string[]) {
-    // Delete multiple users from the database
-    return await this.userModel.deleteMany({ chatId: { $in: ids } });
-  }
-
   async blockUser(@Res() res: Response, chatId: string) {
     // Block a user by setting the 'blocked' field to true
     try {
       const resp = await this.userModel.updateOne(
-        {
-          chatId: chatId,
-        },
-        { $set: { blocked: true } },
+        { chatId: chatId },
+        { blocked: true },
       );
+      // Logger.debug(resp);
 
       if (!resp) {
         return res
@@ -264,7 +280,7 @@ export class AdminService {
         {
           chatId: chatId,
         },
-        { $set: { blocked: false } },
+        { blocked: false },
       );
 
       if (!resp) {

@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Delete, Body, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Body,
+  Res,
+  Logger,
+} from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { Response } from 'express';
 
@@ -37,7 +45,7 @@ export class AdminController {
     if (!chatId) {
       return res.status(400).json({ message: 'missing chatId' });
     }
-
+    Logger.debug(chatId);
     return this.adminService.deleteUser(res, chatId);
   }
 
@@ -47,7 +55,7 @@ export class AdminController {
       return res.status(400).json({ message: 'missing chatIds' });
     }
 
-    return this.adminService.deleteUsers(chatIds);
+    return this.adminService.deleteUsers(res, chatIds);
   }
 
   @Post('blockUser')
@@ -64,7 +72,7 @@ export class AdminController {
       return res.status(400).json({ message: 'missing chatId' });
     }
 
-    return this.adminService.blockUser(res, chatId);
+    return this.adminService.unblockUser(res, chatId);
   }
 
   @Post('blockUsers')
