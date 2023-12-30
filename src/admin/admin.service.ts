@@ -1,4 +1,4 @@
-import { Injectable, Res } from '@nestjs/common';
+import { Injectable, Logger, Res } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User } from 'src/schemas/userSchema';
@@ -6,7 +6,7 @@ import { Admin } from 'src/schemas/Admin';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
 import { Response } from 'express';
-import bcryptjs from 'bcryptjs';
+import { compare, hash } from 'bcryptjs';
 
 @Injectable()
 export class AdminService {
@@ -23,10 +23,11 @@ export class AdminService {
       const foundUser = await this.adminModel.findOne({ email: email });
       if (!foundUser) return res.sendStatus(401); //Unauthorized
       // check password with hash to evaluate password is correct or not
-      const match = bcryptjs.compareSync(password, foundUser.password);
+      const match = await compare(password, foundUser.password);
       // if password and email is correct then:
       if (match && foundUser.email === email) {
-        const roles = Object.values(foundUser.roles).filter(Boolean);
+        const roles = 5150;
+        Logger.debug(match);
         // 1. create JWTs
         const authToken = jwt.sign(
           {
@@ -155,6 +156,36 @@ export class AdminService {
     }
   }
 
+  async register(@Res() res: Response, email: string, password: string) {
+    try {
+      if (!password || !email) {
+        return res
+          .status(400)
+          .json({ message: 'insufficient agruments are required.' });
+      }
+      // console.log(req.body)
+
+      // to check whether some user already exists with the given email
+      const duplicate2 = await this.adminModel.findOne({ email: email });
+      // if the given email or username exists with this email and password send error message
+      if (duplicate2) return res.sendStatus(409); //Conflict
+
+      // before storing into database encrypt the password
+      const hashedPwd = await hash(password, 10);
+
+      // create and store the new user details in database
+      const result = await this.adminModel.create({
+        email: email,
+        password: hashedPwd,
+      });
+      // send response to the client
+      res
+        .status(201)
+        .json({ success: true, message: `User created successfully!`, result });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  }
   async getUsers() {
     // Fetch all users from the database
     return await this.userModel.find({});

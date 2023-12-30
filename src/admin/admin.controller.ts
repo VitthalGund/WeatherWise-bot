@@ -18,6 +18,14 @@ export class AdminController {
   async google(@Res() res: Response, @Body('email') googleAccessToken: string) {
     return this.adminService.google(res, googleAccessToken);
   }
+  @Post('register')
+  async register(
+    @Body('email') email: string,
+    @Body('password') password: string,
+    @Res() res: Response,
+  ) {
+    return this.adminService.register(res, email, password);
+  }
 
   @Get('users')
   async getUsers() {

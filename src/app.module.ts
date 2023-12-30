@@ -35,7 +35,12 @@ import { JwtService } from '@nestjs/jwt';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(AdminMiddleware).forRoutes('admin/login');
-    consumer.apply(AdminMiddleware).forRoutes('admin/login/google');
+    consumer.apply(AdminMiddleware).exclude('admin/login');
+    consumer.apply(AdminMiddleware).exclude('admin/login/google');
+    consumer.apply(AdminMiddleware).exclude('admin/register');
+    consumer.apply(AdminMiddleware).forRoutes('admin/users');
+    consumer.apply(AdminMiddleware).forRoutes('admin/user');
+    consumer.apply(AdminMiddleware).forRoutes('admin/blockUser');
+    consumer.apply(AdminMiddleware).forRoutes('admin/blockUsers');
   }
 }
