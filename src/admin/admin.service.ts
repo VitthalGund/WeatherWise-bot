@@ -192,17 +192,25 @@ export class AdminService {
       res.status(400).json({ message: 'missing chatIds' });
     }
     try {
-      const resp = await this.userModel.findOneAndDelete(
-        { chatId: chatId },
-        { blocked: true },
-      );
-      Logger.debug(resp);
-    } catch (error) {
-      Logger.debug(error);
-    }
+      const resp = await this.userModel.deleteOne({ chatId: chatId });
 
-    // Delete a user from the database
-    // return res.json(resp);
+      Logger.debug(resp);
+
+      if (!resp) {
+        return res.status(400).json({ message: 'Invalid user id' });
+      }
+      if (resp.deletedCount == 0) {
+        return res.status(400).json({ message: 'user not found' });
+      }
+
+      if (resp.deletedCount == 1) {
+        return res
+          .status(200)
+          .json({ message: 'User account deleted successfully' });
+      }
+    } catch (error) {
+      return res.status(500).json({ message: error });
+    }
   }
 
   async deleteUsers(ids: string[]) {
@@ -214,14 +222,53 @@ export class AdminService {
     // Block a user by setting the 'blocked' field to true
     try {
       const resp = await this.userModel.updateOne(
-        { chatId },
+        {
+          chatId: chatId,
+        },
         { $set: { blocked: true } },
       );
+
       if (!resp) {
         return res.status(400).json({ message: 'Invalid user id' });
       }
+      if (resp.matchedCount == 0) {
+        return res.status(400).json({ message: 'user not found' });
+      }
+      if (resp.matchedCount == 1 && resp.modifiedCount == 0) {
+        return res.status(200).json({ message: 'user is already blocked' });
+      }
       if (resp.matchedCount == 1 && resp.modifiedCount == 1) {
-        res.status(200).json({ message: 'user is blocked successfully' });
+        return res
+          .status(200)
+          .json({ message: 'user is blocked successfully' });
+      }
+    } catch (error) {
+      return res.status(500).json({ message: error });
+    }
+  }
+  async unblockUser(@Res() res: Response, chatId: string) {
+    // Block a user by setting the 'blocked' field to true
+    try {
+      const resp = await this.userModel.updateOne(
+        {
+          chatId: chatId,
+        },
+        { $set: { blocked: false } },
+      );
+
+      if (!resp) {
+        return res.status(400).json({ message: 'Invalid user id' });
+      }
+      if (resp.matchedCount == 0) {
+        return res.status(400).json({ message: 'user not found' });
+      }
+      if (resp.matchedCount == 1 && resp.modifiedCount == 0) {
+        return res.status(200).json({ message: 'user is already unblocked' });
+      }
+      if (resp.matchedCount == 1 && resp.modifiedCount == 1) {
+        return res
+          .status(200)
+          .json({ message: 'user is unblocked successfully' });
       }
     } catch (error) {
       return res.status(500).json({ message: error });
@@ -235,6 +282,7 @@ export class AdminService {
         { chatId: { $in: chatIds } },
         { blocked: true },
       );
+
       if (!resp) {
         return res.status(400).json({ message: 'Invalid user id' });
       }

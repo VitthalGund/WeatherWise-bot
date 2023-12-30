@@ -42,7 +42,7 @@ export class AdminController {
   }
 
   @Delete('users')
-  async deleteUsers(@Res() res: Response, @Body('ids') chatIds: string[]) {
+  async deleteUsers(@Res() res: Response, @Body('chatIds') chatIds: string[]) {
     if (!chatIds) {
       return res.status(400).json({ message: 'missing chatIds' });
     }
@@ -58,9 +58,17 @@ export class AdminController {
 
     return this.adminService.blockUser(res, chatId);
   }
+  @Post('unblockUser')
+  async unblockUser(@Res() res: Response, @Body('chatId') chatId: string) {
+    if (!chatId) {
+      return res.status(400).json({ message: 'missing chatId' });
+    }
+
+    return this.adminService.blockUser(res, chatId);
+  }
 
   @Post('blockUsers')
-  async blockUsers(@Res() res: Response, @Body('ids') chatIds: string[]) {
+  async blockUsers(@Res() res: Response, @Body('chatIds') chatIds: string[]) {
     if (!chatIds) {
       return res.status(400).json({ message: 'missing chatIds' });
     }
