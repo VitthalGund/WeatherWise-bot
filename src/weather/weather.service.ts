@@ -15,11 +15,12 @@ export class WeatherServices {
   private logger = new Logger(WeatherServices.name);
 
   constructor(@InjectModel(User.name) private userModel: mongoose.Model<User>) {
-    this.bot = new TelegramBot(process.env.TelgramBotApiKey, {
-      webHook: {
-        port: process.env.PORT || 3000,
+    this.bot = new TelegramBot(
+      '6193066330:AAH_kz-8l5hPKZE-WpAgaDfqL08JUWv9WOM',
+      {
+        polling: true,
       },
-    });
+    );
     this.bot.on('message', (msg: Message) => {
       this.logger.debug(msg);
       if (msg.text.toLowerCase() === '/start') {
@@ -121,6 +122,7 @@ export class WeatherServices {
           chatId,
           username,
           locationName,
+          blocked: false,
         },
       },
       {
