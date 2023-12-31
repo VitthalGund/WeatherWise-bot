@@ -21,10 +21,10 @@ async function bootstrap() {
     const origin = request.headers['origin'];
     if (allowedOrigins.includes(origin)) {
       // console.log(origin);
-      response.header('Access-Control-Allow-Origin', origin);
+      response.header('Access-Control-Allow-Origin', 'true');
     }
     next();
   });
-  await app.listen(3000);
+  await app.listen(4000);
 }
 bootstrap();

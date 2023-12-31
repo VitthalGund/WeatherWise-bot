@@ -1,121 +1,97 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-// import { MongooseModule } from '@nestjs/mongoose';
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const TelegramBot = require('node-telegram-bot-api');
+import { Model } from 'mongoose';
 import axios from 'axios';
-import mongoose from 'mongoose';
-import { Message } from 'node-telegram-bot-api';
+import { Telegraf, Context } from 'telegraf';
 import { User } from 'src/schemas/userSchema';
 import { Cron } from '@nestjs/schedule';
 
 @Injectable()
 export class WeatherServices {
-  private bot: any;
+  private bot: Telegraf<Context>; // Adjust the type based on the actual type of your bot
   private logger = new Logger(WeatherServices.name);
 
-  constructor(@InjectModel(User.name) private userModel: mongoose.Model<User>) {
-    this.bot = new TelegramBot(process.env.TelgramBotApiKey, {
-      webHook: {
-        port: process.env.PORT || 3000,
-      },
-    });
-    this.bot.on('message', (msg: Message) => {
-      this.logger.debug(msg);
-      if (msg.text.toLowerCase() === '/start') {
-        this.start(msg.chat.id);
-      }
+  constructor(@InjectModel(User.name) private userModel: Model<User>) {
+    this.initializeBot();
+  }
 
-      if (msg.text.toLowerCase() === '/subscribe') {
-        this.subscribed(msg, true);
-      }
-
-      if (msg.text.toLowerCase().startsWith('location:')) {
-        this.subscribed(msg, false).then((status) => {
-          if (status === 'No response' || status === 'blocked') {
-            return;
-          }
-          this.subscribeUser(
-            msg.chat.id.toString().toLowerCase(),
-            msg.text.split(':')[1].trim().toLowerCase(),
-            msg.from.first_name,
+  private initializeBot() {
+    // this.bot = new Telegraf(process.env.TelgramBotApiKey);
+    if (process.env.environment == 'PRODUCTION') {
+      // if environment is "Production"
+      this.bot = new Telegraf(process.env.MAIN_BOT_TOKEN);
+      this.bot
+        .launch({
+          webhook: {
+            domain: process.env.DOMAIN, // Your domain URL (where server code will be deployed)
+            port: (process.env.PORT as unknown as number) || 8000,
+          },
+        })
+        .then(() => {
+          console.info(
+            `The bot ${this.bot.botInfo.username} is running on server`,
           );
         });
-      }
+    } else {
+      // Else local
+      this.bot = new Telegraf(process.env.TEST_BOT_TOKEN);
+      this.bot.launch().then(() => {
+        console.info(`The bot ${this.bot.botInfo.username} is running locally`);
+      });
+    }
 
-      if (msg.text.toLowerCase().startsWith('updates')) {
-        userModel
-          .findOne({ chatId: msg.chat.id.toString() }, { locationName: 1 })
-          .then((value) => {
-            if (value === null) {
-              this.bot.sendMessage(
-                msg.chat.id,
-                'Your not subscribed to service yet',
-              );
-              this.bot.sendMessage(
-                msg.chat.id,
-                'send /subscribe to receive daily weather updates!',
-              );
-              return;
-            }
-            this.fetchWeatherDataForLocation(value.locationName).then(
-              (value) => {
-                const messgae = this.generateMessage(value);
-                this.bot.sendMessage(msg.chat.id, messgae);
-              },
-            );
-          })
-          .catch(this.logger.debug);
-      }
+    this.bot.start((ctx) => this.start(ctx));
+    this.bot.command('subscribe', (ctx) => this.subscribe(ctx));
+    this.bot.hears(/^location:/i, (ctx) => this.handleLocation(ctx));
+    this.bot.hears(/^updates/i, (ctx) => this.sendUpdates(ctx));
 
-      // const pattern = /^\/[\w\s'.-]+$/i;
-      // this.logger.debug(pattern.test(msg.text));
-    });
+    // this.bot.launch().then(() => {
+    //   this.logger.log('Bot started');
+    // });
   }
 
-  async subscribed(msg: Message, newUser: boolean) {
-    const chatId = msg.chat.id.toString();
+  private async start(ctx: Context) {
+    ctx.reply('Welcome to WeatherWise Bot');
+  }
 
+  private async subscribe(ctx: Context) {
+    const chatId = ctx.chat.id.toString();
     const duplicate = await this.userModel.findOne({ chatId });
+
     if (duplicate?.blocked) {
-      this.bot.sendMessage(chatId, 'No service available!');
-      return 'blocked';
-    }
-    if (newUser) {
-      if (duplicate) {
-        this.bot.sendMessage(
-          chatId,
-          'You are already subscribed, You will received weather at 7AM daily!',
-        );
-        return 'No response';
-      }
-
-      this.bot.sendMessage(
-        chatId,
-        'Enter the name of your location.(eg: location:Mumbai)',
-      );
-    }
-  }
-
-  start(chatId: number) {
-    this.bot.sendMessage(chatId, 'Welcome to WeatherWise Bot');
-  }
-
-  async subscribeUser(chatId: string, locationName: string, username: string) {
-    const data = await this.fetchWeatherDataForLocation(locationName);
-    this.logger.debug(data);
-    console.log(data);
-    if (data === 'No response') {
-      this.bot.sendMessage('Invalid location!');
+      ctx.reply('No service available!');
       return;
     }
 
-    this.bot.sendMessage(chatId, this.generateMessage(data));
-    // Store the chatId and location in MongoDB
-    const user = await this.userModel.updateOne(
-      {
-        chatId,
-      },
+    if (duplicate) {
+      ctx.reply(
+        'You are already subscribed. You will receive weather updates daily at 7 AM.',
+      );
+      return;
+    }
+
+    ctx.reply('Enter the name of your location. (e.g., location:Mumbai)');
+  }
+
+  private async handleLocation(ctx: Context) {
+    const chatId = ctx.chat.id.toString();
+    if (!('text' in ctx.message)) {
+      return 'Text not found';
+    }
+    const locationName = ctx.message.text.split(':')[1]?.trim().toLowerCase();
+
+    if (!locationName) {
+      ctx.reply('Invalid location!');
+      return;
+    }
+
+    const data = await this.fetchWeatherDataForLocation(locationName);
+    const username = ctx.from.first_name;
+
+    ctx.reply(this.generateMessage(data));
+
+    await this.userModel.updateOne(
+      { chatId },
       {
         $set: {
           chatId,
@@ -123,44 +99,44 @@ export class WeatherServices {
           locationName,
         },
       },
-      {
-        upsert: true,
-      },
+      { upsert: true },
     );
-    if (user.upsertedCount == 1) {
-      this.bot.sendMessage(
-        chatId,
-        'Congratulations, You will received weather at 7AM daily!',
+
+    ctx.reply(
+      'Congratulations! You will receive weather updates daily at 7 AM.',
+    );
+    ctx.reply('Thanks for choosing WeatherWise!');
+  }
+
+  private async sendUpdates(ctx: Context) {
+    const chatId = ctx.chat.id.toString();
+    const user = await this.userModel.findOne({ chatId });
+
+    if (!user) {
+      ctx.reply(
+        'You are not subscribed to the service yet. Send /subscribe to receive daily weather updates!',
       );
-      this.bot.sendMessage(chatId, 'Thanks for choosing WeatherWise!');
+      return;
     }
-    if (user.modifiedCount == 1) {
-      this.bot.sendMessage(
-        chatId,
-        'Your location is updated to ' + locationName,
-      );
-      this.bot.sendMessage(
-        chatId,
-        'You will received weather at 7AM daily for !' + locationName,
-      );
-      this.bot.sendMessage(
-        chatId,
-        'Your can change your location any time (no warries)!',
-      );
-    }
+
+    const data = await this.fetchWeatherDataForLocation(user.locationName);
+    const message = this.generateMessage(data);
+
+    ctx.reply(message);
   }
 
   @Cron('0 7 * * *')
-  async sendUpdates() {
+  private async scheduledSendUpdates() {
     // Fetch weather data for each subscriber and send them a message.
     const users = await this.userModel.find({ blocked: false });
 
     for (const user of users) {
       const data = await this.fetchWeatherDataForLocation(user.locationName);
       const message = this.generateMessage(data);
-      this.bot.sendMessage(user.chatId, message);
+      this.bot.telegram.sendMessage(user.chatId, message);
     }
   }
+
   private async fetchWeatherDataForLocation(locationName: string) {
     // implement the code to handle location name
     try {
