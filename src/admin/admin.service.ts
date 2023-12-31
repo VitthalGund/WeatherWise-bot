@@ -62,7 +62,7 @@ export class AdminService {
       // check password with hash to evaluate password is correct or not
       const match = await compare(password, foundUser.password);
       // if password and email is correct then:
-      if (match && foundUser.email === email) {
+      if (match && foundUser.email === email && foundUser?.isVerified) {
         const roles = 5150;
         // 1. create JWTs
         const accessToken = await this.jwtService.signAsync(
@@ -132,18 +132,23 @@ export class AdminService {
           const email = response.data.email;
           // const picture = response.data.picture;
 
-          const existingUser = await this.adminModel.findOne({ email });
+          let existingUser: any = await this.adminModel.findOne({ email });
 
-          //   if (!existingUser) {
-          //     const result = await this.userModel.create({
-          //       isVerified: true,
-          //       email,
-          //       username: firstName + lastName,
-          //       socialLogin: true,
-          //     });
-          //     existingUser = result;
-          //   }
-          const roles = Object.values(existingUser.roles).filter(Boolean);
+          if (!existingUser) {
+            const result = await this.userModel.create({
+              isVerified: true,
+              email,
+              username: firstName + lastName,
+              socialLogin: true,
+            });
+            existingUser = result;
+          }
+          if (!existingUser.isVerified) {
+            return res.status(200).json({
+              message: 'Admin account created, wait for verification',
+            });
+          }
+          const roles = 5150;
           const accessToken = await this.jwtService.signAsync(
             {
               UserInfo: {
@@ -175,6 +180,7 @@ export class AdminService {
             roles,
             success: true,
             accessToken: accessToken,
+            message: 'Login successfully!',
           });
         })
         .catch((e) => {
