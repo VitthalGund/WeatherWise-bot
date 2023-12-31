@@ -19,25 +19,10 @@ export class WeatherServices {
     // this.bot = new Telegraf(process.env.TelgramBotApiKey);
     if (process.env.environment == 'PRODUCTION') {
       // if environment is "Production"
-      this.bot = new Telegraf(process.env.MAIN_BOT_TOKEN);
-      this.bot
-        .launch({
-          webhook: {
-            domain: process.env.DOMAIN, // Your domain URL (where server code will be deployed)
-            port: (process.env.PORT as unknown as number) || 8000,
-          },
-        })
-        .then(() => {
-          console.info(
-            `The bot ${this.bot.botInfo.username} is running on server`,
-          );
-        });
+      this.bot = new Telegraf(process.env.TelgramBotApiKey as string);
     } else {
       // Else local
-      this.bot = new Telegraf(process.env.TEST_BOT_TOKEN);
-      this.bot.launch().then(() => {
-        console.info(`The bot ${this.bot.botInfo.username} is running locally`);
-      });
+      this.bot = new Telegraf(process.env.TelgramBotApiKey as string);
     }
 
     this.bot.start((ctx) => this.start(ctx));
