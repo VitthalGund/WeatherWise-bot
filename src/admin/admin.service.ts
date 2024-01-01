@@ -15,6 +15,42 @@ export class AdminService {
     @InjectModel(Admin.name) private adminModel: Model<Admin>,
     private jwtService: JwtService,
   ) {}
+  async refresh(jwt: string, res: Response<any, Record<string, any>>) {
+    if (!jwt) return res.sendStatus(401);
+    const refreshToken = jwt;
+
+    const foundUser = await this.adminModel.findOne({ refreshToken });
+    // if user not found
+    if (!foundUser) return res.sendStatus(403); //Forbidden
+    // evaluate jwt to assign the new jwt token to user
+    try {
+      const decoded = await this.jwtService.verifyAsync(refreshToken, {
+        secret: process.env.REFRESH_TOKEN_SECRET,
+      });
+      const roles = Object.values(foundUser.roles);
+      const accessToken = await this.jwtService.signAsync(
+        {
+          UserInfo: {
+            username: decoded.username,
+            email: decoded.email,
+            roles: roles,
+          },
+        },
+        {
+          secret: process.env.ACCESS_TOKEN_SECRET,
+          expiresIn: '72h',
+        },
+      );
+      res.json({
+        roles,
+        accessToken,
+        email: foundUser.email,
+        username: foundUser.username,
+      });
+    } catch (error) {
+      return res.sendStatus(403).json({ message: 'Invalid token' });
+    }
+  }
 
   async API(
     res: Response<any, Record<string, any>>,

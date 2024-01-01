@@ -9,7 +9,12 @@ import {
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { Response } from 'express';
+import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 
+const Cookies = createParamDecorator((data: string, ctx: ExecutionContext) => {
+  const request = ctx.switchToHttp().getRequest();
+  return data ? request.cookies?.[data] : request.cookies;
+});
 @Controller('admin')
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
@@ -35,6 +40,11 @@ export class AdminController {
   ) {
     Logger.debug(email);
     return this.adminService.register(res, email, password);
+  }
+
+  @Get('refresh')
+  async refresh(@Cookies('jwt') jwt: string, @Res() res: Response) {
+    return this.adminService.refresh(jwt, res);
   }
 
   @Get('users')
