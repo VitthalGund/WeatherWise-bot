@@ -2,9 +2,9 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 // import { WeatherController } from './weather/weather.controller';
-import { WeatherModule } from './weather/weather.module';
+// import { WeatherModule } from './weather/weather.module';
+// import { WeatherServices } from './weather/weather.service';
 import { ConfigModule } from '@nestjs/config';
-import { WeatherServices } from './weather/weather.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from './schemas/userSchema';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -17,7 +17,7 @@ import { JwtService } from '@nestjs/jwt';
 
 @Module({
   imports: [
-    WeatherModule,
+    // WeatherModule,
     ConfigModule.forRoot({ envFilePath: '.env.local' }),
     MongooseModule.forRoot(process.env.DATABASE_URI),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
@@ -26,7 +26,12 @@ import { JwtService } from '@nestjs/jwt';
     AdminModule,
   ],
   controllers: [AppController, AdminController],
-  providers: [WeatherServices, AppService, AdminService, JwtService],
+  providers: [
+    // WeatherServices,
+    AppService,
+    AdminService,
+    JwtService,
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
