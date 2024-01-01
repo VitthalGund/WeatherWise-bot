@@ -2,7 +2,7 @@
   "name": "whether-telegram-bot",
   "version": "0.0.1",
   "description": "",
-  "private": true,
+  "private": false,
   "author": "vitthal gund",
   "license": "UNLICENSED",
   "scripts": {
@@ -32,7 +32,7 @@
     "dotenv": "^16.3.1",
     "mongoose": "^8.0.3",
     "node-telegram-bot-api": "^0.64.0",
-    "reflect-metadata": "^0.2.1",
+    "reflect-metadata": "^0.1.12",
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
