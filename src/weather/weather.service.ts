@@ -8,6 +8,7 @@ import mongoose from 'mongoose';
 import { Message } from 'node-telegram-bot-api';
 import { User } from 'src/schemas/userSchema';
 import { Cron } from '@nestjs/schedule';
+require('dotenv').config();
 
 @Injectable()
 export class WeatherServices {
@@ -15,12 +16,11 @@ export class WeatherServices {
   private logger = new Logger(WeatherServices.name);
 
   constructor(@InjectModel(User.name) private userModel: mongoose.Model<User>) {
-    this.bot = new TelegramBot(
-      '6193066330:AAH_kz-8l5hPKZE-WpAgaDfqL08JUWv9WOM',
-      {
-        polling: true,
-      },
-    );
+    console.log(process.env.TelgramBotApiKey);
+    this.bot = new TelegramBot(process.env.TelgramBotApiKey, {
+      polling: true,
+    });
+
     this.bot.on('message', (msg: Message) => {
       this.logger.debug(msg);
       if (msg.text.toLowerCase() === '/start') {
