@@ -56,13 +56,16 @@ export class AdminService {
     try {
       if (!password || !email)
         return res.status(400).json({ message: 'insufficient parameters.' });
-      // console.log(req.body)
-      const foundUser = await this.adminModel.findOne({ email: email });
+      const foundUser = await this.adminModel.findOne({
+        email,
+        isVerified: true,
+      });
       if (!foundUser) return res.sendStatus(401); //Unauthorized
       // check password with hash to evaluate password is correct or not
       const match = await compare(password, foundUser.password);
+
       // if password and email is correct then:
-      if (match && foundUser.email === email && foundUser?.isVerified) {
+      if (match) {
         const roles = 5150;
         // 1. create JWTs
         const accessToken = await this.jwtService.signAsync(

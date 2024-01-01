@@ -20,6 +20,7 @@ export class AdminController {
     @Body('password') password: string,
     @Res() res: Response,
   ) {
+    Logger.debug(email);
     return this.adminService.login(res, email, password);
   }
   @Post('login/google')
@@ -32,6 +33,7 @@ export class AdminController {
     @Body('password') password: string,
     @Res() res: Response,
   ) {
+    Logger.debug(email);
     return this.adminService.register(res, email, password);
   }
 

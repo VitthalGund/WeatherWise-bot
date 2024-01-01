@@ -22,7 +22,7 @@ export class AdminMiddleware implements NestMiddleware {
       (req.headers.authorization as string) ||
       (req.headers.Authorization as string);
     if (!token) {
-      return res.status(400).json({ message: 'Unauthorized' });
+      return res.status(400).json({ message: 'Invalid token' });
     }
 
     try {

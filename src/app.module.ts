@@ -1,4 +1,9 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import {
+  MiddlewareConsumer,
+  Module,
+  NestModule,
+  RequestMethod,
+} from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 // import { WeatherController } from './weather/weather.controller';
@@ -35,12 +40,15 @@ import { JwtService } from '@nestjs/jwt';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(AdminMiddleware).exclude('admin/login');
     consumer.apply(AdminMiddleware).exclude('admin/login/google');
+    consumer.apply(AdminMiddleware).exclude('admin/login');
     consumer.apply(AdminMiddleware).exclude('admin/register');
     consumer.apply(AdminMiddleware).forRoutes('admin/users');
     consumer.apply(AdminMiddleware).forRoutes('admin/user');
     consumer.apply(AdminMiddleware).forRoutes('admin/blockUser');
     consumer.apply(AdminMiddleware).forRoutes('admin/blockUsers');
+    // consumer
+    //   .apply(AdminMiddleware)
+    //   .forRoutes({ path: '/admin/users', method: RequestMethod.ALL });
   }
 }
