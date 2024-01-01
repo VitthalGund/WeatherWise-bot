@@ -14,6 +14,7 @@ import { AdminService } from './admin/admin.service';
 import { Admin, AdminSchema } from './schemas/Admin';
 import { AdminMiddleware } from './admin/middleware/admin.middleware';
 import { JwtService } from '@nestjs/jwt';
+import * as cors from 'cors';
 
 @Module({
   imports: [
@@ -35,6 +36,14 @@ import { JwtService } from '@nestjs/jwt';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(
+        cors({
+          origin: ['https://vitthalgund.github.io', 'http://localhost:5173'],
+          credentials: true,
+        }),
+      )
+      .forRoutes('*');
     consumer.apply(AdminMiddleware).exclude('admin/login/google');
     consumer.apply(AdminMiddleware).exclude('admin/login');
     consumer.apply(AdminMiddleware).exclude('admin/register');
