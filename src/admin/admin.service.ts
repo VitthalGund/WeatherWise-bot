@@ -96,6 +96,7 @@ export class AdminService {
         email,
         isVerified: true,
       });
+      Logger.debug(foundUser);
       if (!foundUser) return res.sendStatus(401); //Unauthorized
       // check password with hash to evaluate password is correct or not
       const match = await compare(password, foundUser.password);

@@ -8,6 +8,7 @@ import mongoose from 'mongoose';
 import { Message } from 'node-telegram-bot-api';
 import { User } from 'src/schemas/userSchema';
 import { Cron } from '@nestjs/schedule';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 require('dotenv').config();
 
 @Injectable()
@@ -46,8 +47,12 @@ export class WeatherServices {
 
       if (msg.text.toLowerCase().startsWith('updates')) {
         userModel
-          .findOne({ chatId: msg.chat.id.toString() }, { locationName: 1 })
+          .findOne(
+            { chatId: msg.chat.id.toString() },
+            { locationName: 1, blocked: 1 },
+          )
           .then((value) => {
+            Logger.debug(value);
             if (value === null) {
               this.bot.sendMessage(
                 msg.chat.id,
@@ -58,6 +63,9 @@ export class WeatherServices {
                 'send /subscribe to receive daily weather updates!',
               );
               return;
+            }
+            if (value.blocked) {
+              return this.bot.sendMessage(msg.chat.id, 'No service available');
             }
             this.fetchWeatherDataForLocation(value.locationName).then(
               (value) => {
